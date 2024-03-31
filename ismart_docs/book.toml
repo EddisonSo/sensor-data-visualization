@@ -1,0 +1,6 @@
+[book]
+authors = ["Eddison So"]
+language = "en"
+multilingual = false
+src = "src"
+title = "ISmart API Documentation"

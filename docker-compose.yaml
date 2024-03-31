@@ -1,0 +1,101 @@
+version: "3"
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: ./db/db.dockerfile 
+    image: "ismart-db"
+    container_name: "ismart-db" 
+    environment:
+      POSTGRES_DB: "ismart"
+      POSTGRES_USER: "ismart"
+      POSTGRES_PASSWORD: "ismart" 
+      PGDATA: "/data/ismart"
+    volumes:
+       - ismart:/data/ismart
+    networks:
+       - db-subnet 
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+  ismart_api:
+    build:
+      context: .
+      dockerfile: ./sensor_api/api.dockerfile
+    image: "ismart-api"
+    container_name: "ismart-api"
+    environment:
+      DB_HOSTNAME: "ismart-db"
+      DB_USER: "ismart"
+      DB_PASSWORD: "ismart" 
+      DB_PORT: 5432
+      DB_NAME: "ismart"
+    networks:
+       - api-subnet 
+       - db-subnet
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+  ismart-map:
+    build:
+      context: .
+      dockerfile: ./map_server/map.dockerfile
+    image: "ismart-map"
+    container_name: "ismart-map"
+    networks:
+       - api-subnet 
+       - external
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+  mqtt_client:
+    build:
+      context: .
+      dockerfile: ./mqtt_client/mqtt.dockerfile
+    image: "ismart-mqtt"
+    container_name: "ismart-mqtt"
+    networks:
+       - api-subnet
+       - mqtt-subnet
+    restart: unless-stopped
+  nginx:
+    build:
+      context: .
+      dockerfile: ./nginx/nginx.dockerfile
+    image: "ismart-nginx"
+    container_name: "ismart-nginx"
+    networks:
+       - external
+       - api-subnet
+    ports:
+       - "80:80"
+       - "8080:8080"
+    restart: unless-stopped
+  mqtt_server:
+    build:
+      context: .
+      dockerfile: ./mqtt/mqtt.dockerfile
+    image: "mqtt-server"
+    volumes:
+      - type: bind
+        source: ./mqtt/config/
+        target: /mosquitto/config/
+        read_only: false
+    container_name: "mqtt-server"
+    networks:
+       - external
+       - mqtt-subnet
+    ports:
+       - "1883:1883"
+    restart: unless-stopped
+volumes:
+  ismart:
+    external: true
+networks:
+  db-subnet:
+    internal: true
+  api-subnet:
+    internal: true
+  mqtt-subnet:
+    internal: true
+  external:
